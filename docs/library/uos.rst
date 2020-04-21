@@ -112,7 +112,7 @@ Filesystem access
 Terminal redirection and duplication
 ------------------------------------
 
-.. function:: dupterm(stream_object, index=0)
+.. function:: dupterm(stream_object, index=0, /)
 
    Duplicate or switch the MicroPython terminal (the REPL) on the given `stream`-like
    object. The *stream_object* argument must be a native stream object, or derive
@@ -191,6 +191,9 @@ represented by VFS classes.
 
         Build a Lfs1 filesystem on *block_dev*.
 
+    .. note:: There are reports of littlefs v1 failing in certain situations,
+              for details see `littlefs issue 347`_.
+
 .. class:: VfsLfs2(block_dev)
 
     Create a filesystem object that uses the `littlefs v2 filesystem format`_.
@@ -204,17 +207,30 @@ represented by VFS classes.
 
         Build a Lfs2 filesystem on *block_dev*.
 
+    .. note:: There are reports of littlefs v2 failing in certain situations,
+              for details see `littlefs issue 295`_.
+
 .. _littlefs v1 filesystem format: https://github.com/ARMmbed/littlefs/tree/v1
 .. _littlefs v2 filesystem format: https://github.com/ARMmbed/littlefs
+.. _littlefs issue 295: https://github.com/ARMmbed/littlefs/issues/295
+.. _littlefs issue 347: https://github.com/ARMmbed/littlefs/issues/347
 
 Block devices
 -------------
 
-A block device is an object which implements the block protocol, which is a set
-of methods described below by the :class:`AbstractBlockDev` class.  A concrete
-implementation of this class will usually allow access to the memory-like
-functionality a piece of hardware (like flash memory).  A block device can be
-used by a particular filesystem driver to store the data for its filesystem.
+A block device is an object which implements the block protocol. This enables a
+device to support MicroPython filesystems. The physical hardware is represented
+by a user defined class. The :class:`AbstractBlockDev` class is a template for
+the design of such a class: MicroPython does not actually provide that class,
+but an actual block device class must implement the methods described below.
+
+A concrete implementation of this class will usually allow access to the
+memory-like functionality of a piece of hardware (like flash memory). A block
+device can be formatted to any supported filesystem and mounted using ``uos``
+methods.
+
+See :ref:`filesystem` for example implementations of block devices using the
+two variants of the block protocol described below.
 
 .. _block-device-interface:
 
@@ -225,6 +241,10 @@ There are two compatible signatures for the ``readblocks`` and ``writeblocks``
 methods (see below), in order to support a variety of use cases.  A given block
 device may implement one form or the other, or both at the same time. The second
 form (with the offset parameter) is referred to as the "extended interface".
+
+Some filesystems (such as littlefs) that require more control over write
+operations, for example writing to sub-block regions without erasing, may require
+that the block device supports the extended interface.
 
 .. class:: AbstractBlockDev(...)
 
@@ -282,5 +302,12 @@ form (with the offset parameter) is referred to as the "extended interface".
             (*arg* is unused)
           - 6 -- erase a block, *arg* is the block number to erase
 
-See :ref:`filesystem` for example implementations of block devices using both
-protocols.
+       As a minimum ``ioctl(4, ...)`` must be intercepted; for littlefs
+       ``ioctl(6, ...)`` must also be intercepted. The need for others is
+       hardware dependent.
+
+       Unless otherwise stated ``ioctl(op, arg)`` can return ``None``.
+       Consequently an implementation can ignore unused values of ``op``. Where
+       ``op`` is intercepted, the return value for operations 4 and 5 are as
+       detailed above. Other operations should return 0 on success and non-zero
+       for failure, with the value returned being an ``OSError`` errno code.
