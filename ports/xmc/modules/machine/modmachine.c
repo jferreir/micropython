@@ -28,6 +28,9 @@
 
 #include "py/runtime.h"
 #include "extmod/machine_mem.h"
+#include "modmachine.h"
+
+#if MICROPY_PY_MACHINE
 
 STATIC mp_obj_t machine_reset(void) {
     NVIC_SystemReset();
@@ -91,10 +94,9 @@ STATIC const mp_rom_map_elem_t machine_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_mem32),               MP_ROM_PTR(&machine_mem32_obj) },
     { MP_ROM_QSTR(MP_QSTR_unique_id),           MP_ROM_PTR(&machine_unique_id_obj) },
 
-    // Classes
-    //{ MP_ROM_QSTR(MP_QSTR_Pin),                 MP_ROM_PTR(&machine_pin_class) },
-
+    { MP_ROM_QSTR(MP_QSTR_Pin), MP_ROM_PTR(&machine_pin_type) },
 };
+
 STATIC MP_DEFINE_CONST_DICT(machine_module_globals, machine_module_globals_table);
 
 const mp_obj_module_t mp_module_machine = {
@@ -102,3 +104,4 @@ const mp_obj_module_t mp_module_machine = {
     .globals = (mp_obj_dict_t*)&machine_module_globals,
 };
 
+#endif // MICROPY_PY_MACHINE

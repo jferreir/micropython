@@ -1,6 +1,14 @@
+# Select the board to build for: if not given on the command line,
+# then default to RELAXKIT_XMC47.
 BOARD ?= RELAXKIT_XMC47
-BOARD_DIR ?= boards/$(BOARD)
+
+# If the build directory is not given, make it reflect the board name.
 BUILD ?= build-$(BOARD)
+
+BOARD_DIR ?= boards/$(BOARD)
+ifeq ($(wildcard $(BOARD_DIR)/.),)
+$(error Invalid BOARD specified: $(BOARD_DIR))
+endif
 
 CROSS_COMPILE ?= arm-none-eabi-
 
@@ -21,6 +29,7 @@ include $(BOARD_DIR)/mpconfigboard.mk
 INC += -I.
 INC += -I$(TOP)
 INC += -I$(BUILD)
+INC += -Iboards
 INC += -I$(BOARD_DIR)
 INC += -I$(TOP)/lib/xmclib/CMSIS/Include
 INC += -I$(TOP)/lib/xmclib/CMSIS/Infineon/$(MCU_SERIES)_series/Include
@@ -106,7 +115,10 @@ SRC_C = \
 	mphalport.c \
 	help.c \
 	modules/machine/modmachine.c \
+	modules/machine/machine_pin.c \
 	modules/utime/modutime.c \
+	$(BOARD_DIR)/board.c \
+
 
 ifeq ($(MCU_FAMILY),XMC1)
 SRC_s = lib/utils/gchelper_m0.s
@@ -119,7 +131,9 @@ SRC_S = lib/xmclib/CMSIS/Infineon/$(MCU_SERIES)_series/Source/GCC/startup_$(MCU_
 # List of sources for qstr extraction
 SRC_QSTR += \
 	modules/machine/modmachine.c \
+	modules/machine/machine_pin.c \
     modules/utime/modutime.c \
+	$(BOARD_DIR)/board.c \
 
 OBJ += $(PY_O)
 OBJ += $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
